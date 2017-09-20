@@ -3,8 +3,19 @@ layout: page
 title: About
 ---
 
-Hello.
+Hello!
 
-This will be your About page. Anything about you, it should be written here in details. You may describe your bio here like who you are, what you do, your intention, social site hyperlinks and how people can contact you, etc.
+I'm Daniel. I'm a computer science student from the University of Zaragoza. I love computers, develop code,
+travelling, strength sports and the healthy food.
 
-**Less is more..**
+If you have any doubt of my publications or just want to know more, please, <a href="mailto:danir94@gmail.com" target="_top">contact with me</a>!!!
+
+<div class="divider"></div>
+
+<!-- Para aniadir en un futuro mas botones de redes sociales: https://github.com/janhuenermann/social-circles -->
+<div style="text-align: center">
+	<a class="icon-twitter social-button color" href="http://twitter.com/danirueda_94" target="_blank"></a>
+	<a class="icon-github social-button color" href="https://github.com/danirueda" target="_blank"></a>
+</div>
+
+
