@@ -29,26 +29,78 @@ To understand this better you can see the next diagram, also, you can see the ip
 ![Diagram](../postsImages/CNAME-hack-with-FreeIPA/network_diagram.png)
 
 
-I configured the network and installed FreeIPA in the master server. Before install this, I changed the hostname to ns1.daniel.as2.unizar.es and I configured as forwarder the nameserver ns1.as2.uniar.es. In this server were defined already the necessary glue records to the future nameservers of the zone daniel.as2.unizar.es.
+I configured the network and installed FreeIPA in the master server. Before install this, I changed the hostname to `ipa41.daniel.as2.unizar.es` and I configured as forwarder the nameserver `ns1.as2.uniar.es`. In this server were defined already the necessary glue records to the future nameservers of the zone `daniel.as2.unizar.es`.
 
-Well, the zone daniel.as2.uniar.es was defined automatically during FreeIPA installation, but FreeIPA installer couldn't find a reverse zone automatically, this is normal because in the server ns1.as2.unizar.es the reverse zone wasn't defined.
+Well, the zone `daniel.as2.uniar.es` was defined automatically during FreeIPA installation, but FreeIPA installer couldn't find a reverse zone automatically, this is normal because in the server `ns1.as2.unizar.es` the reverse zone wasn't defined.
 
 # The problem
 And here comes the problem. As you have seen, my given network was `155.210.161.32/28`, this prefix is not multiple of 24, that is, a claseless ip. So, to solve this I found [this](https://www.freeipa.org/page/Howto/DNS_classless_IN-ADDR.ARPA_delegation) in the FreeIPA page. 
 
-As you can read in the theory section, the clients look for names like w.x.y.z.in-addr.arpa because clients can't possibly know how networks are partitioned. The main trick is to use CNAME/DNAME records to redirect clients from w.x.y.z.in-addr.arpa to some other name. The target name can be arbitrary DNS name, i.e. the name can belong to different zone and normal delegation rules will apply.
+As you can read in the theory section, in reverse DNS resolution, the clients look for names like w.x.y.z.in-addr.arpa because clients can't possibly know how networks are partitioned. The main trick is to use CNAME/DNAME records to redirect clients from w.x.y.z.in-addr.arpa to some other name. The target name can be arbitrary DNS name, i.e. the name can belong to different zone and normal delegation rules will apply.
 
-The next section in the page is an example to understand how to solve it better. Well, this example is wrong and I will say why later. But first, look how the example defines the reverse zone with the syntax `a/w.x.y.z.in-addr.arpa.`. This will bring confusions in the future because we can mistake the prefix number (w) with the last number of the direction (a). There is another more simple and clear syntax.
+The next section in the page is an example to understand how to solve it better. Well, this example is wrong and I will say why later. But first, look how the example defines the reverse zone with the syntax `a/w.x.y.z.in-addr.arpa.` This will bring confusions in the future because we can mistake the prefix number (w) with the last number of the direction (a). There is another more simple and clear syntax.
 
-Now I'm going to say why the FreeIPA's example is wrong: DNS names are reversed. It says that wants to delegate zone for classless network `198.51.100.0/26` in ipa1.example.com and it's in ipa2.example.com. At the same that the neartest class network is `198.51.100.0/24` and the entries are stored in ipa1.example.com and not in ipa2.example.com.
+Now I'm going to say why the FreeIPA's example is wrong: DNS names are reversed. It says that wants to delegate zone for classless network `198.51.100.0/26` in `ipa1.example.com` and it's in `ipa2.example.com`. At the same that the neartest class network is `198.51.100.0/24` and the entries are stored in `ipa1.example.com.` and not in `ipa2.example.com.`
 
 Ok, after all this explanations, I decided to do this better combining the solution of [FreeIPA page](https://www.freeipa.org/page/Howto/DNS_classless_IN-ADDR.ARPA_delegation) with the other syntax mentioned above. This work can be separated in two parts.
 
 1. Define the glue records to an auxiliary zone.
-2. Define the zone in the FreeIPA servers.
+2. Define the auxiliary zone in the FreeIPA servers.
 
-## Define the glue records to an auxiliary zone.
+## Define the glue records to an auxiliary zone
+In this part I'm going to delegate the zone `155.210.161.32-47` to the servers `ipa41.daniel.as2.unizar.es` and `ipa42.daniel.as2.unizar.es.` To get this, into the file `named.conf` on the nameserver `ns1.as2.unizar.es` that contains the entries for the zone `155.210.161.32/24`, or the same `155.210.161.0-255`, I added the next content:
+
+```
+; alumno daniel rueda
+$GENERATE 32-47 $ CNAME $ .32-47
+35 CNAME 35.32-47
+36 CNAME 36.32-47
+32-47.161.210.155.in-addr.arpa. NS ipa41.daniel.as2.unizar.es.
+32-47.161.210.155. in-addr.arpa. NS ipa42.daniel.as2.unizar.es.
+``` 
 
 
+The words that start with `$` are DNS file commands. With `$GENERATE` command, it generates a set of entries automatically, specifically since 32 to 47. `CNAME` gives an additional name, in this case `.32-47`. To understand better all this explanation, you can read [this part](https://books.google.com.hk/books?id=GB_O89fnz_sC&lpg=PA406&dq=bind%20cname%20hack%20byte%20boundary&hl=es&pg=PA400#v=onepage&q=bind%20cname%20hack%20byte%20boundary&f=false) of the book Linux Administration Handbook. Finally, in the last two lines it defines the authority servers of the zone `32-47.161.210.155.in-addr.arpa.` All this is better to understad with an example.
 
+### Example
+Let's supose that some machine will search which is the name of the ip `155.210.161.38`, that is, it will search the entry `38.161.210.155.in-addr.arpa.` As we know, reverse DNS search from right to left. It will have found the zone `161.210.155.in-addr.arpa.` in the server `ns1.as2.unizar.es.` The next entry to find is `38.`. The resolution finds that `38.` has a new name which is `38.32-47.` Then, it has to access to the zone `32-47.161.210.155.in-addr.arpa.` and it finds that the authority nameservers are `ipa41.daniel.as2.unizar.es.` and `ipa42.daniel.as2.unizar.es.` (my servers). By last, the resolution will find the given ip in `ipa41.daniel.as2.unizar.es.` or in `ipa42.daniel.as2.unizar.es.`
 
+## Define the auxiliray zone in FreeIPA servers
+Finally, it's time to define the auxiliary zone in the authority servers, now in FreeIPA master (`ipa41.daniel.as2.unizar.es`) I added the auxiliary zone.
+
+```
+[ a559207@ipa41 ~] $ ipa dnszone-add 32-47.161.210.155.in-addr.arpa.
+Zone name : 32-47.161.210.155.in-addr.arpa.
+Active zone : TRUE
+Authoritative nameserver : ipa41.daniel.as2.unizar.es.
+Administrator e-mail address : hostmaster
+SOA serial : 1497869513
+SOA refresh : 3600
+SOA retry : 900
+SOA expire : 1209600
+SOA minimum : 3600
+BIND update policy : grant DANIEL.AS2.UNIZAR.ES krb5-subdomain 32-47.161.210.155.in-addr.arpa. PTR
+Dynamic update : FALSE
+Allow query : any ;
+Allow transfer : none ;
+``` 
+
+After this, I added the `PTR` entries:
+
+```
+[ a559207@ipa41 ~] $ ipa dnsrecord-add 32-47.161.210.155.in-addr.arpa. 35 --ptr-rec ipa41.daniel.as2.unizar.es.
+  Record name : 35
+  PTR record : ipa41.daniel.as2.unizar.es.
+[ a559207@ipa41 ~] $ ipa dnsrecord-add 32-47.161.210.155.in-addr.arpa. 36 --ptr-rec ipa42.daniel.as2.unizar.es.
+  Record name : 36
+  PTR record : ipa42.daniel.as2.unizar.es.
+[ a559207@ipa41 ~] $ ipa dnsrecord-add 32-47.161.210.155.in-addr.arpa. 37 --ptr-rec nfs4.daniel.as2.unizar.es.
+  Record name : 37
+  PTR record : nfs4.daniel.as2.unizar.es.
+[ a559207@ipa41 ~] $ ipa dnsrecord-add 32-47.161.210.155.in-addr.arpa. 38 --ptr-rec zabbix1.daniel.as2.unizar.es.
+  Record name : 38
+  PTR record : zabbix1.daniel.as2.unizar.es.
+```
+
+# Conclusion
+As you can see, I've made a new and simply form of CNAME hack with FreeIPA, with a clearest syntax.
