@@ -52,7 +52,7 @@ In this part I'm going to delegate the zone `155.210.161.32-47` to the servers `
 
 ```
 ; alumno daniel rueda
-$GENERATE 32-47 $ CNAME $ .32-47
+$GENERATE 32-47 $ CNAME $.32-47
 35 CNAME 35.32-47
 36 CNAME 36.32-47
 32-47.161.210.155.in-addr.arpa. NS ipa41.daniel.as2.unizar.es.
