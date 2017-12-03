@@ -16,6 +16,7 @@ If you have any doubt of my publications or just want to know more, please, <a h
 <div style="text-align: center">
 	<a class="icon-twitter social-button color" href="http://twitter.com/danirueda_94" target="_blank"></a>
 	<a class="icon-github social-button color" href="https://github.com/danirueda" target="_blank"></a>
+	<a class="icon-linkedin social-button color" href="https://www.linkedin.com/in/daniel-rueda-mac%C3%ADas-48b636154/" target="_blank"></a>
 </div>
 
 
