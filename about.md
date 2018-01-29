@@ -6,9 +6,9 @@ title: About
 Hello!
 
 I'm Daniel. I'm a computer science student from the University of Zaragoza. I love computers, develop code,
-travelling, strength sports and the healthy food.
+travelling, strength sports and healthy food.
 
-If you have any doubt of my publications or just want to know more, please, <a href="mailto:danir94@gmail.com" target="_top">contact with me</a>!!!
+If you have any doubt of my publications or just want to know more, please, <a href="mailto:danir94@gmail.com" target="_top">contact with me</a>!!! I also accept congratulations!!!
 
 <div class="divider"></div>
 
